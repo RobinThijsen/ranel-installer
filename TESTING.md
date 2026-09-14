@@ -64,3 +64,34 @@ Après `issue_panel_certificate` :
 - Si le DNS ne pointe pas encore vers la VM, `issue_panel_certificate` doit
   échouer proprement avec le message loggé ci-dessus, pas planter le script
   sans explication.
+
+## Bout en bout (Task 8)
+
+Sur une VM Ubuntu/Debian jetable avec un domaine dont le DNS pointe déjà
+vers elle :
+
+```bash
+./install.sh \
+  --domain=panel.example.com \
+  --repo-url=file:///path/to/tests/fixtures/fake-panel-app \
+  --deploy-key=/root/.ssh/id_ed25519 \
+  --admin-email=admin@example.com
+```
+
+Vérifier, dans l'ordre des tâches précédentes : paquets actifs, user `panel`
+en nologin, `/opt/panel/scripts` verrouillé, `.env` correct, vhost + certificat
+valides, message de résumé final affiché.
+
+## Test négatif : clé invalide
+
+```bash
+./install.sh \
+  --domain=panel.example.com \
+  --repo-url=git@github.com:agency/panel-app.git \
+  --deploy-key=/root/.ssh/nonexistent-key \
+  --admin-email=admin@example.com
+```
+
+Attendu : le script s'arrête immédiatement après le message "Deploy key
+rejected. Aborting — nothing was installed." et **aucun** paquet n'a été
+installé (`dpkg -l | grep nginx` ne doit rien retourner sur une VM vierge).
