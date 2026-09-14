@@ -51,3 +51,16 @@ Après `deploy_panel_app` :
 Note : ce test manuel utilise le fixture, pas la vraie app panel (qui n'existe
 pas encore — sous-projet séparé). Refaire ce test contre le vrai repo dès qu'il
 existe.
+
+## Vhost nginx et SSL (Task 7)
+
+Après `write_panel_vhost` :
+- `nginx -t` ne rapporte aucune erreur.
+- `curl -I http://<domaine>` répond (redirection ou 200) depuis une machine
+  où le DNS résout déjà vers la VM de test.
+
+Après `issue_panel_certificate` :
+- `curl -I https://<domaine>` répond avec un certificat valide.
+- Si le DNS ne pointe pas encore vers la VM, `issue_panel_certificate` doit
+  échouer proprement avec le message loggé ci-dessus, pas planter le script
+  sans explication.
