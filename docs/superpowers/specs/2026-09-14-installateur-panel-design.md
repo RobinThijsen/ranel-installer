@@ -40,6 +40,32 @@ chacun avec son propre cycle spec → plan → implémentation :
 - **Isolation entre sites hébergés** : un user système Linux dédié + un pool PHP-FPM
   dédié par site (conçu en détail dans le sous-projet 2).
 - **Stack cible v1** : Ubuntu/Debian, nginx, PHP-FPM, MySQL.
+- **OS supportés explicitement** : Ubuntu 22.04+/24.04+ et Debian 12+. PHP 8.4 n'est pas
+  dans les dépôts par défaut de ces versions — l'installateur ajoute le dépôt tiers
+  approprié (`ppa:ondrej/php` sur Ubuntu, `packages.sury.org` sur Debian) avant
+  d'installer les paquets `php8.4-*`. *(Amendement ajouté après la revue finale du
+  sous-projet Installateur — la version initiale de ce document ne fixait aucune
+  version d'OS alors que PHP 8.4 en dépend entièrement.)*
+- **Le panel tourne réellement sous l'utilisateur `panel`, pas sous le pool PHP-FPM par
+  défaut** (`www-data`) : l'installateur crée un pool PHP-FPM dédié
+  (`/etc/php/8.4/fpm/pool.d/panel.conf`, `user`/`group panel`, socket
+  `/run/php/php8.4-fpm-panel.sock`) et le vhost nginx du panel pointe vers ce socket.
+  Sans ce pool, les entrées sudoers scopées à `panel` ne s'appliquent jamais au
+  processus qui sert réellement les requêtes du panel — c'est la fondation même du
+  modèle de sécurité qui serait cassée. *(Amendement ajouté après la revue finale —
+  angle mort de la version initiale.)*
+- **`/opt/panel` appartient à `root:root` (755), jamais à `panel`** : seul
+  `/opt/panel/scripts/` (root:root, 700) et `/opt/panel/app/` (panel:panel, après
+  déploiement) ont un propriétaire particulier. Si `panel` possédait `/opt/panel`
+  lui-même, il pourrait renommer/recréer `/opt/panel/scripts/` (le droit de
+  modification d'une entrée dépend du répertoire parent, pas de l'entrée), rendant le
+  verrou `root:root 700` sur ce sous-dossier sans effet. *(Amendement ajouté après la
+  revue finale.)*
+- **`git` fait partie des paquets installés avant le gate**, puisque le gate
+  (`git ls-remote`) en dépend. Un serveur neuf minimal ne l'inclut pas par défaut.
+  *(Amendement — angle mort de la version initiale : le gate était documenté comme
+  s'exécutant "avant toute action système" alors qu'il nécessite déjà un paquet
+  installé.)*
 
 ## Portée de ce sous-projet
 
@@ -104,17 +130,37 @@ mécanisme de licence/facturation pour la distribution commerciale de la clé gi
   supprimé immédiatement après), jamais persistée sur disque après l'installation. Une
   éventuelle mise à jour du code du panel plus tard nécessitera son propre mécanisme de
   clé — hors scope ici.
+- **Application effective de la suppression de la clé** : l'installateur efface
+  activement (`shred -u`) le fichier de clé fourni après le clone — ce n'est pas
+  seulement "l'installateur n'en fait pas de copie", mais une suppression active du
+  fichier original. *(Amendement — la version initiale n'imposait que l'absence de
+  copie, pas la suppression du fichier fourni.)*
+- **`.env` du panel en `640` (panel:panel), pas en permissions par défaut** : contient
+  le mot de passe MySQL et `APP_KEY`. *(Amendement.)*
+- **Le mot de passe MySQL ne transite jamais en argument de ligne de commande**
+  (visible via `ps aux`) : les commandes `mysql` de création DB/user passent par un
+  heredoc, pas par `-e "... IDENTIFIED BY '...'"`. *(Amendement.)*
 
 ## Gestion des erreurs
 
 - Script en mode strict (`set -euo pipefail`) — tout échec arrête immédiatement
   l'installation, pas d'état partiellement configuré silencieux.
 - Chaque étape logge dans `/var/log/panel-install.log` (horodaté) pour diagnostic
-  après coup.
+  après coup. **La sortie complète des commandes (apt, composer, artisan, certbot,
+  nginx) est aussi capturée dans ce fichier** (pas seulement les lignes de
+  progression) — sinon il ne sert à rien pour diagnostiquer un échec réel.
+  `log_error` écrit aussi sur stderr, pas seulement dans le fichier, pour que l'admin
+  voie l'erreur immédiatement à l'écran. *(Amendement — la version initiale ne
+  précisait pas que la sortie des commandes devait être capturée.)*
 - **Pas d'idempotence en v1** (décision assumée) : en cas d'échec partiel, l'admin
   repart d'un serveur/image propre plutôt que de relancer le script. Documenté
-  explicitement dans le message d'erreur final. À revoir si le besoin se confirme en
-  usage réel.
+  explicitement dans le message d'erreur final (via un `trap ... ERR`, pas seulement
+  en théorie) — un échec qui laisse l'admin devant une sortie brute de composer ou
+  certbot sans indication de reprovisionner ne respecte pas cette exigence. À revoir
+  si le besoin se confirme en usage réel.
+- **Le compte admin créé affiche un mot de passe généré**, passé explicitement à
+  `panel:create-admin --password=`, et affiché dans le résumé final — pas seulement
+  "identifiants admin" vague. *(Amendement.)*
 
 ## Tests
 
