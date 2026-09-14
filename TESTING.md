@@ -154,3 +154,43 @@ rejette la clé (elle n'est pas dans les clés de déploiement autorisées), le
 script s'arrête immédiatement après le message "Deploy key rejected. Aborting
 — nothing was installed." et **aucun** paquet n'a été installé (`dpkg -l |
 grep nginx` ne doit rien retourner sur une VM vierge).
+
+## Bootstrap public (`bootstrap.sh`)
+
+`bootstrap.sh` est le point d'entrée pensé pour la distribution publique
+(hébergé sur un domaine perso, ou servi directement depuis le repo GitHub
+public `ranel-installer`). Il télécharge le reste du repo dans un dossier
+temporaire, demande la clé de déploiement de façon interactive (collée par
+l'admin, jamais passée en argument), puis délègue à `install.sh` exactement
+comme le test de bout en bout ci-dessus.
+
+**Invocation correcte** (comme Homebrew — la substitution de commande laisse
+stdin connecté au terminal) :
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/RobinThijsen/ranel-installer/main/bootstrap.sh)" -- \
+  --domain=panel.example.com \
+  --repo-url=git@github.com:agency/panel-app.git \
+  --admin-email=admin@example.com
+```
+
+**À vérifier manuellement :**
+
+1. **Garde-fou stdin non interactif** : `echo "" | bash bootstrap.sh` doit
+   échouer immédiatement avec un message expliquant d'utiliser
+   `bash -c "$(curl ...)"` plutôt que `curl ... | bash` — ne doit rien
+   télécharger, rien demander.
+2. **Téléchargement** : sur une machine avec `curl`/`tar`, lancer
+   `RANEL_INSTALLER_ARCHIVE_URL=<url-tarball> bash -c "$(cat bootstrap.sh)"`
+   (ou héberger un tarball de test) et vérifier que le dossier temporaire
+   contient bien `install.sh` et `lib/`.
+3. **Saisie de la clé** : coller le contenu d'une clé de test, terminer par
+   `EOF` sur sa propre ligne ; vérifier que le fichier temporaire créé
+   contient exactement le contenu collé, en `600`.
+4. **Nettoyage** : après une exécution (succès ou échec), vérifier que le
+   dossier temporaire du repo téléchargé et le fichier de clé temporaire
+   n'existent plus (`trap cleanup EXIT` doit s'exécuter dans tous les cas,
+   y compris un échec du gate).
+5. **Bout en bout** : lancer l'invocation correcte ci-dessus contre une VM
+   jetable et un vrai repo — vérifie que tout le flux `install.sh` documenté
+   plus haut se déroule normalement une fois la clé collée.

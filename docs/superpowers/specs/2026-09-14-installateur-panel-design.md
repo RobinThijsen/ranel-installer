@@ -97,6 +97,17 @@ mécanisme de licence/facturation pour la distribution commerciale de la clé gi
 
 ## Flux d'installation (séquence)
 
+0. **Distribution publique via `bootstrap.sh`** (amendement post-implémentation) :
+   l'admin lance `bash -c "$(curl -fsSL <url>)" -- --domain=... --repo-url=...
+   --admin-email=...` (mode Homebrew — la substitution de commande, pas un pipe,
+   pour garder stdin connecté au terminal). `bootstrap.sh` télécharge le repo
+   public `ranel-installer` (tarball, sans authentification — il ne contient que
+   l'installateur, jamais le code propriétaire du panel) dans un dossier
+   temporaire, puis demande explicitement à l'admin de **coller le contenu** de
+   sa clé de déploiement (jamais un chemin de fichier ni un argument CLI), l'écrit
+   dans un fichier temporaire `600`, et délègue à `install.sh` avec
+   `--deploy-key=<ce fichier>`. Le dossier téléchargé et le fichier de clé sont
+   supprimés en sortie (`trap ... EXIT`), y compris si le gate échoue.
 1. L'admin lance le script en root, avec la clé de déploiement git fournie en
    paramètre (fichier temporaire ou prompt interactif — jamais en argument visible
    dans l'historique bash) et le domaine du panel.
