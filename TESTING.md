@@ -18,3 +18,11 @@ qui mutent l'état système.
      demander de mot de passe.
    - `sudo -u panel sudo -n /bin/bash` doit échouer (pas d'accès sudo en dehors
      des scripts listés).
+
+## Paquets système (Task 4)
+
+Après `install_base_packages` :
+- `nginx -v`, `php8.4 -v`, `mysql --version`, `composer --version`, `certbot --version`,
+  `node --version` doivent tous répondre sans erreur.
+- `systemctl is-active nginx`, `systemctl is-active php8.4-fpm`, `systemctl is-active mysql`
+  doivent tous afficher `active`.
