@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Simule `git ls-remote` : réussit si GIT_SSH_COMMAND référence une clé
+# dont le nom de fichier contient "valid", échoue sinon.
+if [[ "$1" == "ls-remote" ]]; then
+  if [[ "$GIT_SSH_COMMAND" == *valid* ]]; then
+    echo "abcd1234 HEAD"
+    exit 0
+  else
+    echo "Permission denied (publickey)." >&2
+    exit 128
+  fi
+fi
+echo "unsupported command in fake git: $*" >&2
+exit 1
