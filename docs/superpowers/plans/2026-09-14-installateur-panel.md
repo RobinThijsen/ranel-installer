@@ -42,7 +42,7 @@ lib/args.sh                         — parse_install_args : lit les arguments C
 lib/gate.sh                         — validate_git_key : vérifie la clé de déploiement avant tout le reste
 lib/packages.sh                     — install_base_packages : apt install nginx/PHP 8.4-FPM/MySQL/Composer/Node/Certbot
 lib/user.sh                         — create_panel_user : crée le user système `panel`
-lib/scripts_dir.sh                  — setup_scripts_dir, render_sudoers_line, add_sudoers_entry
+lib/scripts_dir.sh                  — setup_scripts_dir, setup_sudoers_file, render_sudoers_line, add_sudoers_entry
 lib/deploy.sh                       — deploy_panel_app : clone, .env, composer install, migrations, admin
 lib/nginx.sh                        — render_panel_vhost, write_panel_vhost
 lib/ssl.sh                          — issue_panel_certificate : appel Certbot pour le domaine du panel
@@ -316,6 +316,7 @@ Expected: PASS (2 tests)
 - Consumes: `log_info` (Task 1).
 - Produces: `render_sudoers_line(script_path)` — retourne (via stdout) la ligne sudoers exacte pour ce script (pas de wildcard).
 - Produces: `setup_scripts_dir(dir_path)` — crée le dossier avec les permissions attendues (mutation système, non testée en bats, vérifiée manuellement).
+- Produces: `setup_sudoers_file(sudoers_file)` — crée le fichier sudoers vide s'il n'existe pas encore, avec les permissions attendues par `visudo` (mutation système, non testée en bats, vérifiée manuellement).
 - Produces: `add_sudoers_entry(script_path, sudoers_file)` — ajoute la ligne rendue au fichier sudoers puis valide sa syntaxe avec `visudo -c -f`.
 
 - [ ] **Step 1: Écrire le test de `render_sudoers_line`**
@@ -341,6 +342,8 @@ setup() {
   [[ "$output" == *"/opt/panel/scripts/create-site.sh"* ]]
 }
 ```
+
+`setup_sudoers_file` n'a pas de test bats : comme `setup_scripts_dir`, elle appelle `chown root:root`, qui échoue si le test tourne sans les privilèges root (le cas sur une machine de dev normale). Elle est vérifiée manuellement sur la VM de test (voir `TESTING.md` ci-dessous).
 
 - [ ] **Step 2: Lancer le test et vérifier qu'il échoue**
 
@@ -377,6 +380,21 @@ setup_scripts_dir() {
   chmod 700 "$dir_path"
   log_info "Created privileged scripts directory at ${dir_path} (root:root, 700)"
 }
+
+setup_sudoers_file() {
+  local sudoers_file="$1"
+
+  if [ ! -f "$sudoers_file" ]; then
+    : > "$sudoers_file"
+  fi
+  chown root:root "$sudoers_file"
+  chmod 440 "$sudoers_file"
+
+  if command -v visudo >/dev/null 2>&1; then
+    visudo -c -f "$sudoers_file" >/dev/null
+  fi
+  log_info "Created sudoers file at ${sudoers_file} (root:root, 440, empty)"
+}
 ```
 
 - [ ] **Step 4: Lancer le test et vérifier qu'il passe**
@@ -399,7 +417,10 @@ qui mutent l'état système.
 1. Après exécution de `setup_scripts_dir /opt/panel/scripts` :
    - `stat -c "%U:%G %a" /opt/panel/scripts` doit afficher `root:root 700`.
    - `sudo -u panel touch /opt/panel/scripts/test` doit échouer (Permission denied).
-2. Après `add_sudoers_entry` pour un script donné :
+2. Après `setup_sudoers_file /etc/sudoers.d/panel` :
+   - `stat -c "%U:%G %a" /etc/sudoers.d/panel` doit afficher `root:root 440`.
+   - Le fichier doit être vide (`test -s /etc/sudoers.d/panel` retourne faux).
+3. Après `add_sudoers_entry` pour un script donné :
    - `sudo -u panel sudo -n /opt/panel/scripts/<script>.sh` doit s'exécuter sans
      demander de mot de passe.
    - `sudo -u panel sudo -n /bin/bash` doit échouer (pas d'accès sudo en dehors
@@ -526,7 +547,7 @@ Expected: la section "User système panel (Task 5)" est présente.
 - Modify: `TESTING.md`
 
 **Interfaces:**
-- Consumes: `log_info`, `log_error` (Task 1).
+- Consumes: `log_info`, `log_error` (Task 1). `deploy_panel_app` lit aussi directement la globale `PANEL_ADMIN_EMAIL` remplie par `parse_install_args` (Task 1) — pas passée en paramètre de fonction, même pattern que les autres globales `PANEL_*` utilisées dans `install.sh` (Task 8).
 - Produces: `render_panel_env(env_example_path, db_name, db_user, db_password, app_url, app_key)` — retourne (stdout) le contenu du `.env` généré à partir de `.env.example`, avec les clés `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_URL`, `APP_KEY` remplacées/ajoutées. Pure, testable sans root.
 - Produces: `deploy_panel_app(repo_url, key_path, target_dir, domain, db_name, db_user, db_password)` — clone le repo, écrit le `.env` via `render_panel_env`, lance `composer install`, `php artisan migrate --force`, `php artisan panel:create-admin`. Mutation système, testée manuellement contre `tests/fixtures/fake-panel-app` servi comme dépôt git local (voir `TESTING.md`).
 
@@ -688,7 +709,7 @@ Expected: la section "Déploiement de l'app panel (Task 6)" est présente, avec 
 - Modify: `TESTING.md`
 
 **Interfaces:**
-- Consumes: `log_info` (Task 1).
+- Consumes: `log_info`, `log_error` (Task 1). `issue_panel_certificate` lit aussi directement la globale `PANEL_ADMIN_EMAIL` remplie par `parse_install_args` (Task 1) — pas passée en paramètre, même pattern que `deploy_panel_app` (Task 6).
 - Produces: `render_panel_vhost(domain, app_root)` — retourne (stdout) la config nginx complète pour ce domaine, pointant vers `app_root/public`. Pure, testable.
 - Produces: `write_panel_vhost(domain, app_root, sites_available_dir, sites_enabled_dir)` — écrit le fichier et crée le lien symbolique ; mutation système, vérifiée manuellement.
 - Produces: `issue_panel_certificate(domain)` — appelle `certbot --nginx -d <domain>` ; mutation système, vérifiée manuellement.
@@ -820,7 +841,7 @@ Expected: la section "Vhost nginx et SSL (Task 7)" est présente.
 - Modify: `TESTING.md` (section finale : procédure complète + test négatif)
 
 **Interfaces:**
-- Consumes: toutes les fonctions des tâches 1 à 7 (`parse_install_args`, `validate_git_key`, `install_base_packages`, `create_panel_user`, `setup_scripts_dir`, `deploy_panel_app`, `write_panel_vhost`, `issue_panel_certificate`, `log_info`, `log_error`).
+- Consumes: toutes les fonctions des tâches 1 à 7 (`parse_install_args`, `validate_git_key`, `install_base_packages`, `create_panel_user`, `setup_scripts_dir`, `setup_sudoers_file`, `deploy_panel_app`, `write_panel_vhost`, `issue_panel_certificate`, `log_info`, `log_error`). `deploy_panel_app` et `issue_panel_certificate` lisent aussi directement la globale `PANEL_ADMIN_EMAIL` remplie par `parse_install_args` (Task 1) — pas passée en paramètre de fonction, cohérent avec la manière dont `install.sh` utilise les autres globales `PANEL_*`.
 - Produces: le script exécutable `install.sh`, point d'entrée unique documenté dans la spec.
 
 - [ ] **Step 1: Implémenter `install.sh`**
@@ -868,6 +889,7 @@ main() {
   install_base_packages
   create_panel_user
   setup_scripts_dir "$PANEL_SCRIPTS_DIR"
+  setup_sudoers_file "$PANEL_SUDOERS_FILE"
 
   local db_password
   db_password="$(openssl rand -base64 24)"
@@ -949,7 +971,7 @@ Expected: les deux scénarios se comportent comme documenté.
 - Gate initial sur la clé → Task 2 + orchestré en premier dans `main()` (Task 8). ✓
 - Installation paquets (nginx/PHP 8.4-FPM/MySQL/Composer/Node/Certbot) → Task 4. ✓
 - User `panel` nologin → Task 5. ✓
-- `/opt/panel/scripts` root:root 700 + sudoers scopé sans wildcard → Task 3. ✓
+- `/opt/panel/scripts` root:root 700, `/etc/sudoers.d/panel` créé vide (root:root 440) + sudoers scopé sans wildcard → Task 3, orchestré en Task 8. ✓
 - Clone repo, DB+user MySQL dédié, `.env`, composer install, migrations, admin → Task 6 + orchestration DB dans Task 8. ✓
 - Vhost nginx + Certbot pour le domaine du panel → Task 7. ✓
 - Logging dans `/var/log/panel-install.log` → Task 1, utilisé dans toutes les tâches suivantes. ✓
