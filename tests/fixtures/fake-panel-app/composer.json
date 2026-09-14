@@ -1,0 +1,4 @@
+{
+  "name": "agency/fake-panel-app",
+  "description": "Fixture used only to test install.sh's deploy step, not the real panel app."
+}

@@ -33,3 +33,21 @@ Après `create_panel_user` :
 - `id panel` affiche l'utilisateur avec le bon shell : `getent passwd panel` doit
   se terminer par `/usr/sbin/nologin`.
 - `su - panel` doit refuser toute connexion interactive.
+
+## Déploiement de l'app panel (Task 6)
+
+Prérequis : servir `tests/fixtures/fake-panel-app` comme dépôt git local
+(`cd tests/fixtures/fake-panel-app && git init && git add -A && git commit -m fixture`)
+puis cloner via `file://` à la place d'une vraie URL SSH pour ce test manuel.
+
+Après `deploy_panel_app` :
+- `/opt/panel/app/.env` contient les bonnes valeurs `DB_DATABASE`, `DB_USERNAME`,
+  `APP_URL`.
+- Le fake `artisan` a bien été appelé avec `migrate --force` puis
+  `panel:create-admin <email>` (visible dans les logs, puisque le fake artisan
+  écrit ses arguments sur stdout).
+- `/opt/panel/app` appartient à `panel:panel`.
+
+Note : ce test manuel utilise le fixture, pas la vraie app panel (qui n'existe
+pas encore — sous-projet séparé). Refaire ce test contre le vrai repo dès qu'il
+existe.

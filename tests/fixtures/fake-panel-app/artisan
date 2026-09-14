@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "fake artisan called with: $*"
+exit 0
