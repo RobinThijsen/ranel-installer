@@ -26,3 +26,10 @@ Après `install_base_packages` :
   `node --version` doivent tous répondre sans erreur.
 - `systemctl is-active nginx`, `systemctl is-active php8.4-fpm`, `systemctl is-active mysql`
   doivent tous afficher `active`.
+
+## User système panel (Task 5)
+
+Après `create_panel_user` :
+- `id panel` affiche l'utilisateur avec le bon shell : `getent passwd panel` doit
+  se terminer par `/usr/sbin/nologin`.
+- `su - panel` doit refuser toute connexion interactive.
