@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Fake `visudo` used only by the add_sudoers_entry failure-path bats test:
+# always reports the file as syntactically broken, regardless of content.
+echo "fake visudo: syntax error" >&2
+exit 1

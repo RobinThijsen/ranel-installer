@@ -23,3 +23,41 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"--domain is required"* ]]
 }
+
+@test "parse_install_args fails when --repo-url is missing" {
+  run parse_install_args \
+    --domain=panel.example.com \
+    --deploy-key=/tmp/fake-key \
+    --admin-email=admin@example.com
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--repo-url is required"* ]]
+}
+
+@test "parse_install_args fails when --deploy-key is missing" {
+  run parse_install_args \
+    --domain=panel.example.com \
+    --repo-url=git@github.com:agency/panel-app.git \
+    --admin-email=admin@example.com
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--deploy-key is required"* ]]
+}
+
+@test "parse_install_args fails when --admin-email is missing" {
+  run parse_install_args \
+    --domain=panel.example.com \
+    --repo-url=git@github.com:agency/panel-app.git \
+    --deploy-key=/tmp/fake-key
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--admin-email is required"* ]]
+}
+
+@test "parse_install_args fails on an unknown argument" {
+  run parse_install_args \
+    --domain=panel.example.com \
+    --repo-url=git@github.com:agency/panel-app.git \
+    --deploy-key=/tmp/fake-key \
+    --admin-email=admin@example.com \
+    --bogus=foo
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Unknown argument: --bogus=foo"* ]]
+}

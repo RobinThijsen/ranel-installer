@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fake `nginx` used by bats tests: always reports config as valid.
+exit 0

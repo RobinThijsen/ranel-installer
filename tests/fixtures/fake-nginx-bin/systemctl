@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fake `systemctl` used by bats tests: no-op success for any subcommand.
+exit 0

@@ -17,4 +17,5 @@ log_info() {
 
 log_error() {
   _log_write "ERROR" "$1"
+  echo "ERROR: $1" >&2
 }

@@ -1,3 +1,3 @@
-#!/usr/bin/env bash
-echo "fake artisan called with: $*"
-exit 0
+#!/usr/bin/env php
+<?php
+echo "fake artisan called with: " . implode(' ', array_slice($argv, 1)) . "\n";
