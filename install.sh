@@ -23,6 +23,8 @@ source "${SCRIPT_DIR}/lib/deploy.sh"
 source "${SCRIPT_DIR}/lib/nginx.sh"
 # shellcheck source=lib/ssl.sh
 source "${SCRIPT_DIR}/lib/ssl.sh"
+# shellcheck source=lib/queue.sh
+source "${SCRIPT_DIR}/lib/queue.sh"
 
 PANEL_APP_DIR="/opt/panel/app"
 PANEL_SCRIPTS_DIR="/opt/panel/scripts"
@@ -69,6 +71,8 @@ SQL
     "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password"
 
   sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
+
+  setup_queue_worker "$PANEL_APP_DIR"
 
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
   issue_panel_certificate "$PANEL_DOMAIN"

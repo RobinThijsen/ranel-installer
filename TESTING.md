@@ -210,3 +210,24 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/RobinThijsen/ranel-insta
 5. **Bout en bout** : lancer l'invocation correcte ci-dessus contre une VM
    jetable et un vrai repo — vérifie que tout le flux `install.sh` documenté
    plus haut se déroule normalement une fois la clé collée.
+
+## Worker de queue (`setup_queue_worker`)
+
+Le panel exécute les déploiements Git (sous-projet 4 de `ranel`) via la
+queue `database` de Laravel : sans worker, un déploiement resterait « En
+attente » pour toujours.
+
+Après `setup_queue_worker /opt/panel/app` :
+- `systemctl is-active panel-queue` affiche `active` ;
+  `systemctl is-enabled panel-queue` affiche `enabled`.
+- `ps -o user,cmd -C php` montre `queue:work database` **sous le user
+  `panel`** (jamais root : c'est ce process qui appelle `sudo -n
+  /opt/panel/scripts/site-deploy.sh`, et les entrées sudoers sont scopées
+  à `panel`).
+- `systemctl kill -s KILL panel-queue` puis `sleep 6` : le service est de
+  nouveau `active` (`Restart=always`).
+- `/var/log/panel-queue.log` existe et reçoit les lignes `App\Jobs\DeploySite … DONE/FAIL`
+  au premier déploiement lancé depuis le panel.
+- `--timeout=1860` doit rester ≥ `PANEL_DEPLOY_TIMEOUT` + 60 côté panel
+  (`config/panel.php`), sinon c'est le worker qui tue le job avant que le
+  script ne rende la main.
