@@ -68,6 +68,8 @@ SQL
   deploy_panel_app "$PANEL_REPO_URL" "$PANEL_DEPLOY_KEY_PATH" "$PANEL_APP_DIR" \
     "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password"
 
+  sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
+
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
   issue_panel_certificate "$PANEL_DOMAIN"
 

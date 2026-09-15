@@ -69,3 +69,25 @@ list_privileged_scripts() {
     basename "$script"
   done | sort
 }
+
+sync_privileged_scripts() {
+  local source_dir="$1"
+  local scripts_dir="$2"
+  local sudoers_file="$3"
+
+  local script
+  while IFS= read -r script; do
+    [ -n "$script" ] || continue
+
+    if [ "$(id -u)" -eq 0 ]; then
+      install -o root -g root -m 700 "${source_dir}/${script}" "${scripts_dir}/${script}"
+    else
+      # Running unprivileged (e.g. under bats on a dev machine): can't chown
+      # to root, same fallback as add_sudoers_entry above.
+      install -m 700 "${source_dir}/${script}" "${scripts_dir}/${script}"
+    fi
+
+    add_sudoers_entry "${scripts_dir}/${script}" "$sudoers_file"
+    log_info "Synced privileged script ${script}"
+  done < <(list_privileged_scripts "$source_dir")
+}

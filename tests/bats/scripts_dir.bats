@@ -60,3 +60,33 @@ setup() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "sync_privileged_scripts copies each script and adds a sudoers entry" {
+  local source_dir="$BATS_TEST_TMPDIR/privileged-scripts"
+  local scripts_dir="$BATS_TEST_TMPDIR/opt-scripts"
+  local sudoers_file="$BATS_TEST_TMPDIR/sudoers.d-panel"
+  mkdir -p "$source_dir" "$scripts_dir"
+  : > "$sudoers_file"
+  printf '#!/usr/bin/env bash\necho hi\n' > "$source_dir/create-site.sh"
+  chmod +x "$source_dir/create-site.sh"
+
+  run sync_privileged_scripts "$source_dir" "$scripts_dir" "$sudoers_file"
+
+  [ "$status" -eq 0 ]
+  [ -f "$scripts_dir/create-site.sh" ]
+  run cat "$sudoers_file"
+  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]]
+}
+
+@test "sync_privileged_scripts does nothing when the source directory is absent" {
+  local scripts_dir="$BATS_TEST_TMPDIR/opt-scripts-2"
+  local sudoers_file="$BATS_TEST_TMPDIR/sudoers.d-panel-2"
+  mkdir -p "$scripts_dir"
+  : > "$sudoers_file"
+
+  run sync_privileged_scripts "$BATS_TEST_TMPDIR/does-not-exist" "$scripts_dir" "$sudoers_file"
+
+  [ "$status" -eq 0 ]
+  run cat "$sudoers_file"
+  [ -z "$output" ]
+}

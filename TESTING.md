@@ -159,6 +159,18 @@ script s'arrête immédiatement après le message "Deploy key rejected. Aborting
 — nothing was installed." et **aucun** paquet n'a été installé (`dpkg -l |
 grep nginx` ne doit rien retourner sur une VM vierge).
 
+## Synchronisation des scripts privilégiés
+
+Après `sync_privileged_scripts` (fait partie du flux `install.sh` complet,
+juste après le déploiement de l'app) :
+- `/opt/panel/scripts/example.sh` existe, `stat -c "%U:%G %a"` affiche
+  `root:root 700`.
+- `sudo -u panel sudo -n /opt/panel/scripts/example.sh un deux trois`
+  s'exécute sans mot de passe et affiche
+  "example privileged script called with: un deux trois".
+- Relancer `install.sh` avec un `privileged-scripts/` vide ou absent dans le
+  fixture : aucune erreur, `/opt/panel/scripts/` reste vide (ou inchangé).
+
 ## Bootstrap public (`bootstrap.sh`)
 
 `bootstrap.sh` est le point d'entrée pensé pour la distribution publique
