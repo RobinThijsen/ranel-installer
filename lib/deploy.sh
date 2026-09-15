@@ -59,6 +59,9 @@ deploy_panel_app() {
   log_info "Running composer install"
   (cd "$target_dir" && composer install --no-dev --optimize-autoloader)
 
+  log_info "Installing and building frontend assets"
+  (cd "$target_dir" && npm ci && npm run build)
+
   log_info "Running database migrations"
   (cd "$target_dir" && php artisan migrate --force)
 

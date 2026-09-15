@@ -59,6 +59,10 @@ Après `deploy_panel_app` :
   `APP_URL`.
 - `stat -c "%a" /opt/panel/app/.env` doit afficher `640` (pas world-readable :
   le fichier contient le mot de passe MySQL et `APP_KEY`).
+- `npm ci` puis `npm run build` se sont exécutés avant les migrations (visible
+  dans les logs : "Installing and building frontend assets") — sur le fixture,
+  `npm run build` doit afficher "fake build done" ; sur la vraie app (Vite),
+  vérifier que `/opt/panel/app/public/build/manifest.json` existe après coup.
 - Le fake `artisan` a bien été appelé avec `migrate --force` puis
   `panel:create-admin <email> --password=...` (visible dans les logs, puisque
   le fake artisan écrit ses arguments sur stdout).

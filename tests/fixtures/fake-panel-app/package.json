@@ -1,0 +1,7 @@
+{
+  "name": "fake-panel-app",
+  "private": true,
+  "scripts": {
+    "build": "echo 'fake build done'"
+  }
+}
