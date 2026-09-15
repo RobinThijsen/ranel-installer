@@ -4,6 +4,11 @@ setup() {
   source "$BATS_TEST_DIRNAME/../../lib/scripts_dir.sh"
 }
 
+# Portable file-mode read: GNU stat (-c) on Linux, BSD/macOS stat (-f) otherwise.
+_file_mode() {
+  stat -c "%a" "$1" 2>/dev/null || stat -f "%OLp" "$1"
+}
+
 @test "render_sudoers_line produces an exact-path NOPASSWD entry" {
   run render_sudoers_line "/opt/panel/scripts/create-site.sh"
   [ "$status" -eq 0 ]
@@ -46,6 +51,41 @@ setup() {
   [ "$output" = "$(printf 'aaa.sh\nmmm.sh\nzzz.sh')" ]
 }
 
+@test "list_privileged_scripts ignores symlinks even when named *.sh" {
+  local dir="$BATS_TEST_TMPDIR/privileged-scripts-symlink"
+  mkdir -p "$dir"
+  touch "$dir/real.sh"
+  local target="$BATS_TEST_TMPDIR/outside-target.sh"
+  printf '#!/usr/bin/env bash\necho outside\n' > "$target"
+  ln -s "$target" "$dir/symlink.sh"
+
+  run list_privileged_scripts "$dir"
+  [ "$status" -eq 0 ]
+  [ "$output" = "real.sh" ]
+}
+
+@test "list_privileged_scripts ignores subdirectories even when named *.sh" {
+  local dir="$BATS_TEST_TMPDIR/privileged-scripts-subdir"
+  mkdir -p "$dir"
+  touch "$dir/real.sh"
+  mkdir -p "$dir/subdir.sh"
+
+  run list_privileged_scripts "$dir"
+  [ "$status" -eq 0 ]
+  [ "$output" = "real.sh" ]
+}
+
+@test "list_privileged_scripts ignores filenames with invalid characters (e.g. spaces)" {
+  local dir="$BATS_TEST_TMPDIR/privileged-scripts-badname"
+  mkdir -p "$dir"
+  touch "$dir/real.sh"
+  touch "$dir/bad name.sh"
+
+  run list_privileged_scripts "$dir"
+  [ "$status" -eq 0 ]
+  [ "$output" = "real.sh" ]
+}
+
 @test "list_privileged_scripts returns nothing for an empty directory" {
   local dir="$BATS_TEST_TMPDIR/empty-privileged-scripts"
   mkdir -p "$dir"
@@ -74,8 +114,31 @@ setup() {
 
   [ "$status" -eq 0 ]
   [ -f "$scripts_dir/create-site.sh" ]
+  [ "$(_file_mode "$scripts_dir/create-site.sh")" = "700" ]
   run cat "$sudoers_file"
   [[ "$output" == *"${scripts_dir}/create-site.sh"* ]]
+}
+
+@test "sync_privileged_scripts copies multiple scripts, each mode 700 with its own sudoers entry" {
+  local source_dir="$BATS_TEST_TMPDIR/privileged-scripts-multi"
+  local scripts_dir="$BATS_TEST_TMPDIR/opt-scripts-multi"
+  local sudoers_file="$BATS_TEST_TMPDIR/sudoers.d-panel-multi"
+  mkdir -p "$source_dir" "$scripts_dir"
+  : > "$sudoers_file"
+  printf '#!/usr/bin/env bash\necho hi\n' > "$source_dir/create-site.sh"
+  printf '#!/usr/bin/env bash\necho bye\n' > "$source_dir/delete-site.sh"
+  chmod +x "$source_dir/create-site.sh" "$source_dir/delete-site.sh"
+
+  run sync_privileged_scripts "$source_dir" "$scripts_dir" "$sudoers_file"
+
+  [ "$status" -eq 0 ]
+  [ -f "$scripts_dir/create-site.sh" ]
+  [ -f "$scripts_dir/delete-site.sh" ]
+  [ "$(_file_mode "$scripts_dir/create-site.sh")" = "700" ]
+  [ "$(_file_mode "$scripts_dir/delete-site.sh")" = "700" ]
+  run cat "$sudoers_file"
+  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]]
+  [[ "$output" == *"${scripts_dir}/delete-site.sh"* ]]
 }
 
 @test "sync_privileged_scripts does nothing when the source directory is absent" {

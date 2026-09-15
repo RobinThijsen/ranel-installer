@@ -168,8 +168,8 @@ juste après le déploiement de l'app) :
 - `sudo -u panel sudo -n /opt/panel/scripts/example.sh un deux trois`
   s'exécute sans mot de passe et affiche
   "example privileged script called with: un deux trois".
-- Relancer `install.sh` avec un `privileged-scripts/` vide ou absent dans le
-  fixture : aucune erreur, `/opt/panel/scripts/` reste vide (ou inchangé).
+- Sur une VM neuve, avec un fixture sans `privileged-scripts/` : aucune
+  erreur, `/opt/panel/scripts/` reste vide (ou inchangé).
 
 ## Bootstrap public (`bootstrap.sh`)
 

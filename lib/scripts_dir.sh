@@ -12,6 +12,11 @@ add_sudoers_entry() {
   local tmp_file="${sudoers_file}.tmp"
 
   cp "$sudoers_file" "$tmp_file"
+  # cp bases the new file's mode on the source's (subject to umask, even
+  # without -p, on both GNU and BSD/macOS cp). Since setup_sudoers_file
+  # leaves the source at 440, the copy would otherwise be created read-only
+  # and this append would silently fail on every call after the first.
+  chmod u+w "$tmp_file"
   render_sudoers_line "$script_path" >> "$tmp_file"
 
   if command -v visudo >/dev/null 2>&1; then
@@ -63,10 +68,12 @@ list_privileged_scripts() {
     return 0
   fi
 
-  local script
+  local script name
   for script in "$source_dir"/*.sh; do
-    [ -e "$script" ] || continue
-    basename "$script"
+    [ -f "$script" ] && [ ! -L "$script" ] || continue
+    name="$(basename "$script")"
+    [[ "$name" =~ ^[A-Za-z0-9._-]+\.sh$ ]] || continue
+    echo "$name"
   done | sort
 }
 
@@ -76,6 +83,7 @@ sync_privileged_scripts() {
   local sudoers_file="$3"
 
   local script
+  local count=0
   while IFS= read -r script; do
     [ -n "$script" ] || continue
 
@@ -89,5 +97,8 @@ sync_privileged_scripts() {
 
     add_sudoers_entry "${scripts_dir}/${script}" "$sudoers_file"
     log_info "Synced privileged script ${script}"
+    count=$((count + 1))
   done < <(list_privileged_scripts "$source_dir")
+
+  log_info "Synced ${count} privileged script(s) from ${source_dir}"
 }
