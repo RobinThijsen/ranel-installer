@@ -55,3 +55,17 @@ setup_sudoers_file() {
   fi
   log_info "Created sudoers file at ${sudoers_file} (root:root, 440, empty)"
 }
+
+list_privileged_scripts() {
+  local source_dir="$1"
+
+  if [ ! -d "$source_dir" ]; then
+    return 0
+  fi
+
+  local script
+  for script in "$source_dir"/*.sh; do
+    [ -e "$script" ] || continue
+    basename "$script"
+  done | sort
+}
