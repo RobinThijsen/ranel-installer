@@ -76,6 +76,7 @@ SQL
   deploy_panel_app "$PANEL_REPO_URL" "$PANEL_DEPLOY_KEY_PATH" "$PANEL_APP_DIR" \
     "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password" "$scheme"
 
+  apply_package_manifest "${PANEL_APP_DIR}/system/packages.txt"
   sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
 
   setup_queue_worker "$PANEL_APP_DIR"

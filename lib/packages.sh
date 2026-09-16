@@ -103,3 +103,33 @@ install_composer() {
   rm -f "$installer"
   log_info "Composer installed: $("${install_dir}/composer" --version 2>/dev/null | head -1)"
 }
+
+# The panel app declares the packages it and its sites need at runtime in
+# system/packages.txt (one apt package per line, "#" comments). Applied
+# right after the clone here, and by panel-update.sh on every update, so
+# both paths converge. Idempotent: only missing packages are installed.
+apply_package_manifest() {
+  local manifest="$1"
+  local pkg
+  local missing=()
+
+  if [ ! -f "$manifest" ]; then
+    log_info "No package manifest at ${manifest}, skipping"
+    return 0
+  fi
+
+  while IFS= read -r pkg; do
+    pkg="${pkg%%#*}"
+    pkg="$(echo "$pkg" | tr -d '[:space:]')"
+    [ -n "$pkg" ] || continue
+    dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+  done < "$manifest"
+
+  if [ "${#missing[@]}" -eq 0 ]; then
+    log_info "All packages from ${manifest} already installed"
+    return 0
+  fi
+
+  log_info "Installing packages from ${manifest}: ${missing[*]}"
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing[@]}"
+}

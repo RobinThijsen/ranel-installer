@@ -271,3 +271,13 @@ Après `setup_queue_worker /opt/panel/app` :
 l'installation est identique. Réservé aux VM locales (Lima/Multipass) où
 certbot ne peut pas valider le domaine ; **jamais** sur un serveur exposé.
 Procédure complète côté panel : `docs/TESTING-local-vm.md` dans `ranel`.
+
+## Manifeste de paquets du panel (`apply_package_manifest`)
+
+Après le clone, `install.sh` applique `/opt/panel/app/system/packages.txt`
+(un paquet apt par ligne). Sur une installation neuve tout est déjà
+installé par `install_base_packages` : le log doit dire « All packages
+from … already installed ». Ajouter un paquet au manifeste dans `ranel`
+puis relancer `apply_package_manifest` (ou `panel-update.sh`) doit
+l'installer sans toucher aux autres. C'est le même code que dans
+`panel-update.sh` côté `ranel`.
