@@ -63,15 +63,43 @@ install_base_packages() {
   add_php_repository
   add_node_repository
 
-  log_info "Installing nginx, MySQL, PHP 8.4, Composer, Node.js 22, Certbot"
+  # PHP extensions: what the panel needs plus the usual baseline of hosted
+  # Laravel / Prestashop sites (bcmath, gd, intl, zip, soap, sqlite3, opcache)
+  # — a deployment's composer install fails on the first missing one.
+  log_info "Installing nginx, MySQL, PHP 8.4 + extensions, Node.js 22, Certbot"
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     nginx \
     mysql-server \
-    php8.4-fpm php8.4-mysql php8.4-cli php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip \
+    php8.4-fpm php8.4-cli php8.4-opcache \
+    php8.4-mysql php8.4-sqlite3 \
+    php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip \
+    php8.4-bcmath php8.4-gd php8.4-intl php8.4-soap \
     unzip curl \
     certbot python3-certbot-nginx \
-    nodejs \
-    composer
+    nodejs
 
   log_info "Base packages installed"
+}
+
+# The distro's composer (2.7 on Ubuntu 24.04) floods every log with PHP 8.4
+# deprecation notices: install the current release from getcomposer.org,
+# verifying the installer against the published SHA-384 signature.
+install_composer() {
+  local install_dir="${1:-/usr/local/bin}"
+  local expected actual installer
+
+  expected="$(curl -fsSL https://composer.github.io/installer.sig)"
+  installer="$(mktemp)"
+  curl -fsSL https://getcomposer.org/installer -o "$installer"
+  actual="$(php -r "echo hash_file('sha384', '${installer}');")"
+
+  if [ "$expected" != "$actual" ]; then
+    rm -f "$installer"
+    log_error "Composer installer signature mismatch — not installing"
+    return 1
+  fi
+
+  php "$installer" --quiet --install-dir="$install_dir" --filename=composer
+  rm -f "$installer"
+  log_info "Composer installed: $("${install_dir}/composer" --version 2>/dev/null | head -1)"
 }

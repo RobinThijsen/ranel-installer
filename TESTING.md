@@ -34,9 +34,17 @@ s'exécute avant l'installation des paquets.
 Debian — les paquets `php8.4-*` ne sont pas dans les dépôts par défaut
 d'Ubuntu 22.04+/24.04+ ni de Debian 12+) avant d'installer les paquets `apt`.
 
-Après `install_base_packages` :
+Après `install_base_packages` puis `install_composer` :
 - `nginx -v`, `php8.4 -v`, `mysql --version`, `composer --version`, `certbot --version`,
   `node --version` doivent tous répondre sans erreur.
+- `composer --version` doit afficher une version 2.8+ depuis
+  `/usr/local/bin/composer` (getcomposer.org, signature vérifiée), pas le
+  2.7 des dépôts Ubuntu qui remplit chaque journal de « Deprecation
+  Notice » avec PHP 8.4.
+- `php -m | grep -E "^(bcmath|gd|intl|zip|soap|sqlite3|opcache)$"` doit
+  lister les 7 extensions : ce sont celles dont les sites hébergés ont
+  besoin (premier déploiement réel : `moneyphp/money` exige `bcmath`,
+  `phpspreadsheet` exige `gd`).
 - `systemctl is-active nginx`, `systemctl is-active php8.4-fpm`, `systemctl is-active mysql`
   doivent tous afficher `active`.
 

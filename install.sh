@@ -50,6 +50,7 @@ main() {
   fi
 
   install_base_packages
+  install_composer
   create_panel_user
   setup_panel_php_pool
   setup_scripts_dir "$PANEL_SCRIPTS_DIR"
