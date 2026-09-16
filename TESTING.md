@@ -52,6 +52,26 @@ Après `create_panel_user` :
   (le droit de modification d'une entrée dépend du répertoire parent, pas de
   l'entrée elle-même). Vérifié après création du user, avant tout déploiement.
 
+## Instance PHP-FPM dédiée du panel (`setup_panel_php_pool`)
+
+Le panel a **sa propre instance** `panel-fpm.service`, pas seulement un
+pool dans `php8.4-fpm` : le service `php8.4-fpm` de Debian/Ubuntu tourne
+avec `ProtectSystem=full`, qui rend `/etc` en lecture seule pour tout ce
+qu'il lance — y compris `sudo -n /opt/panel/scripts/*.sh`. Symptôme
+observé au premier test VM : `useradd: cannot lock /etc/passwd` depuis
+le panel alors que le même script passe depuis un shell.
+
+Après `setup_panel_php_pool` :
+- `systemctl is-active panel-fpm php8.4-fpm` → `active` `active`.
+- `systemctl show panel-fpm -p ProtectSystem` → `ProtectSystem=no` ;
+  `systemctl show php8.4-fpm -p ProtectSystem` → `ProtectSystem=full`
+  (les pools des sites restent durcis).
+- `ls -l /run/php/php8.4-fpm-panel.sock` → `srw-rw---- www-data www-data`.
+- `ls /etc/php/8.4/fpm/pool.d/` ne contient **pas** `panel.conf` (il est
+  dans `/etc/php/8.4/fpm/panel/pool.d/`).
+- Depuis le panel, « Provisionner » un site doit réussir (c'est le test
+  qui a révélé le problème).
+
 ## Déploiement de l'app panel (Task 6)
 
 Prérequis : servir `tests/fixtures/fake-panel-app` comme dépôt git local
