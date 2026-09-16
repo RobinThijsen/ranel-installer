@@ -40,20 +40,37 @@ add_php_repository() {
   esac
 }
 
+# The distro's nodejs (18 on Ubuntu 24.04 / Debian 12) is too old for the
+# panel's Vite build (Vite 7+ needs Node 20.19+): use NodeSource's Node 22
+# LTS repository, same signed-keyring approach as the PHP repository.
+add_node_repository() {
+  local node_major="22"
+
+  log_info "Adding NodeSource repository for Node.js ${node_major}.x"
+  apt-get install -y ca-certificates curl gnupg
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${node_major}.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list
+  apt-get update -y
+}
+
 install_base_packages() {
   log_info "Updating apt package index"
   apt-get update -y
 
   add_php_repository
+  add_node_repository
 
-  log_info "Installing nginx, MySQL, PHP 8.4, Composer, Node.js, Certbot"
+  log_info "Installing nginx, MySQL, PHP 8.4, Composer, Node.js 22, Certbot"
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     nginx \
     mysql-server \
-    php8.4-fpm php8.4-mysql php8.4-cli php8.4-xml php8.4-mbstring php8.4-curl \
+    php8.4-fpm php8.4-mysql php8.4-cli php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip \
     unzip curl \
     certbot python3-certbot-nginx \
-    nodejs npm \
+    nodejs \
     composer
 
   log_info "Base packages installed"

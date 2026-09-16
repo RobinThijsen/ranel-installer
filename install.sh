@@ -67,19 +67,28 @@ SQL
   local admin_password
   admin_password="$(openssl rand -base64 18)"
 
+  local scheme="https"
+  if [ "$PANEL_SKIP_SSL" -eq 1 ]; then
+    scheme="http"
+  fi
+
   deploy_panel_app "$PANEL_REPO_URL" "$PANEL_DEPLOY_KEY_PATH" "$PANEL_APP_DIR" \
-    "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password"
+    "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password" "$scheme"
 
   sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
 
   setup_queue_worker "$PANEL_APP_DIR"
 
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
-  issue_panel_certificate "$PANEL_DOMAIN"
+  if [ "$PANEL_SKIP_SSL" -eq 1 ]; then
+    log_info "--skip-ssl given: no Let's Encrypt certificate requested, panel served over plain HTTP (local/test use only)"
+  else
+    issue_panel_certificate "$PANEL_DOMAIN"
+  fi
 
   echo ""
   echo "Panel installed successfully."
-  echo "URL: https://${PANEL_DOMAIN}"
+  echo "URL: ${scheme}://${PANEL_DOMAIN}"
   echo "Admin account: ${PANEL_ADMIN_EMAIL}"
   echo "Admin password: ${admin_password}"
 }

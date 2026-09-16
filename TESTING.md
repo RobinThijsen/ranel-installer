@@ -25,6 +25,10 @@ Avant `install_base_packages`, `ensure_git_installed` doit avoir rendu `git`
 disponible (`command -v git`) puisque le gate initial (Task 2) en dépend et
 s'exécute avant l'installation des paquets.
 
+`install_base_packages` ajoute aussi le dépôt NodeSource (Node.js 22 LTS,
+`node --version` doit afficher `v22.x`) : le Node 18 des dépôts Ubuntu
+24.04 / Debian 12 ne peut pas exécuter le build Vite du panel.
+
 `install_base_packages` ajoute d'abord le dépôt tiers PHP approprié
 (`add_php_repository` : `ppa:ondrej/php` sur Ubuntu, `packages.sury.org` sur
 Debian — les paquets `php8.4-*` ne sont pas dans les dépôts par défaut
@@ -231,3 +235,11 @@ Après `setup_queue_worker /opt/panel/app` :
 - `--timeout=1860` doit rester ≥ `PANEL_DEPLOY_TIMEOUT` + 60 côté panel
   (`config/panel.php`), sinon c'est le worker qui tue le job avant que le
   script ne rende la main.
+
+## Test local sans DNS (`--skip-ssl`)
+
+`--skip-ssl` saute uniquement `issue_panel_certificate` et écrit
+`APP_URL=http://<domaine>` au lieu de `https://`. Tout le reste de
+l'installation est identique. Réservé aux VM locales (Lima/Multipass) où
+certbot ne peut pas valider le domaine ; **jamais** sur un serveur exposé.
+Procédure complète côté panel : `docs/TESTING-local-vm.md` dans `ranel`.

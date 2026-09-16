@@ -41,6 +41,7 @@ deploy_panel_app() {
   local db_user="$6"
   local db_password="$7"
   local admin_password="$8"
+  local scheme="${9:-https}"
 
   log_info "Cloning panel app from ${repo_url} into ${target_dir}"
   GIT_SSH_COMMAND="ssh -i ${key_path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
@@ -53,7 +54,7 @@ deploy_panel_app() {
   app_key="base64:$(openssl rand -base64 32)"
 
   render_panel_env "${target_dir}/.env.example" "$db_name" "$db_user" "$db_password" \
-    "https://${domain}" "$app_key" > "${target_dir}/.env"
+    "${scheme}://${domain}" "$app_key" > "${target_dir}/.env"
   chmod 640 "${target_dir}/.env"
 
   log_info "Running composer install"

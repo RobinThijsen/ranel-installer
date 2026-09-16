@@ -6,6 +6,7 @@ parse_install_args() {
   PANEL_REPO_URL=""
   PANEL_DEPLOY_KEY_PATH=""
   PANEL_ADMIN_EMAIL=""
+  PANEL_SKIP_SSL=0
 
   for arg in "$@"; do
     case "$arg" in
@@ -13,6 +14,7 @@ parse_install_args() {
       --repo-url=*) PANEL_REPO_URL="${arg#--repo-url=}" ;;
       --deploy-key=*) PANEL_DEPLOY_KEY_PATH="${arg#--deploy-key=}" ;;
       --admin-email=*) PANEL_ADMIN_EMAIL="${arg#--admin-email=}" ;;
+      --skip-ssl) PANEL_SKIP_SSL=1 ;;
       *)
         echo "Unknown argument: $arg" >&2
         return 1

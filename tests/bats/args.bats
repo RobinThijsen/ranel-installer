@@ -61,3 +61,20 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"Unknown argument: --bogus=foo"* ]]
 }
+
+@test "parse_install_args defaults to SSL on and accepts --skip-ssl" {
+  parse_install_args \
+    --domain=panel.example.com \
+    --repo-url=git@github.com:agency/panel-app.git \
+    --deploy-key=/tmp/fake-key \
+    --admin-email=admin@example.com
+  [ "$PANEL_SKIP_SSL" -eq 0 ]
+
+  parse_install_args \
+    --domain=panel.localhost \
+    --repo-url=file:///srv/panel-app \
+    --deploy-key=/tmp/fake-key \
+    --admin-email=admin@example.com \
+    --skip-ssl
+  [ "$PANEL_SKIP_SSL" -eq 1 ]
+}
