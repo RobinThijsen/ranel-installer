@@ -25,6 +25,8 @@ source "${SCRIPT_DIR}/lib/nginx.sh"
 source "${SCRIPT_DIR}/lib/ssl.sh"
 # shellcheck source=lib/queue.sh
 source "${SCRIPT_DIR}/lib/queue.sh"
+# shellcheck source=lib/scheduler.sh
+source "${SCRIPT_DIR}/lib/scheduler.sh"
 
 PANEL_APP_DIR="/opt/panel/app"
 PANEL_SCRIPTS_DIR="/opt/panel/scripts"
@@ -80,6 +82,7 @@ SQL
   sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
 
   setup_queue_worker "$PANEL_APP_DIR"
+  setup_scheduler "$PANEL_APP_DIR"
 
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
   if [ "$PANEL_SKIP_SSL" -eq 1 ]; then
