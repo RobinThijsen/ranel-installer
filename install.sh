@@ -27,6 +27,8 @@ source "${SCRIPT_DIR}/lib/ssl.sh"
 source "${SCRIPT_DIR}/lib/queue.sh"
 # shellcheck source=lib/scheduler.sh
 source "${SCRIPT_DIR}/lib/scheduler.sh"
+# shellcheck source=lib/logrotate.sh
+source "${SCRIPT_DIR}/lib/logrotate.sh"
 
 PANEL_APP_DIR="/opt/panel/app"
 PANEL_SCRIPTS_DIR="/opt/panel/scripts"
@@ -83,6 +85,7 @@ SQL
 
   setup_queue_worker "$PANEL_APP_DIR"
   setup_scheduler "$PANEL_APP_DIR"
+  setup_panel_logrotate "$PANEL_FPM_VERSION"
 
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
   if [ "$PANEL_SKIP_SSL" -eq 1 ]; then
