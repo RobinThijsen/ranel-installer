@@ -10,6 +10,7 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"server_name panel.example.com;"* ]]
   [[ "$output" == *"root /opt/panel/app/public;"* ]]
+  [[ "$output" == *"root /opt/panel/app/public;"$'\n'"    include /etc/nginx/ranel/panel.d/*.conf;"* ]]
   [[ "$output" == *"fastcgi_pass unix:/run/php/php8.4-fpm-panel.sock;"* ]]
 }
 
@@ -18,6 +19,7 @@ setup() {
   local sites_available="$BATS_TEST_TMPDIR/sites-available"
   local sites_enabled="$BATS_TEST_TMPDIR/sites-enabled"
   mkdir -p "$sites_available" "$sites_enabled"
+  export PANEL_NGINX_D="$BATS_TEST_TMPDIR/ranel/panel.d"
 
   run write_panel_vhost "panel.example.com" "/opt/panel/app" "$sites_available" "$sites_enabled"
   [ "$status" -eq 0 ]
@@ -28,4 +30,7 @@ setup() {
   [[ "$output" == *"root /opt/panel/app/public;"* ]]
 
   [ -L "$sites_enabled/panel.conf" ]
+  # the directory the include points at exists, even empty
+  [ -d "$PANEL_NGINX_D" ]
+  grep -q "include $PANEL_NGINX_D/\*.conf;" "$sites_available/panel.conf"
 }

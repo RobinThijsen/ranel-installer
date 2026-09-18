@@ -88,6 +88,13 @@ SQL
   setup_panel_logrotate "$PANEL_FPM_VERSION"
 
   write_panel_vhost "$PANEL_DOMAIN" "$PANEL_APP_DIR"
+
+  # phpMyAdmin behind the panel session (the app's panel-phpmyadmin.sh owns
+  # it, panel-update.sh reruns it). Not fatal: without it the panel works,
+  # its phpMyAdmin button just stays hidden until the next panel-update.sh.
+  if ! "${PANEL_SCRIPTS_DIR}/panel-phpmyadmin.sh" install; then
+    log_error "phpMyAdmin could not be installed — the panel works without it; rerun panel-update.sh later"
+  fi
   if [ "$PANEL_SKIP_SSL" -eq 1 ]; then
     log_info "--skip-ssl given: no Let's Encrypt certificate requested, panel served over plain HTTP (local/test use only)"
   else
