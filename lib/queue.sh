@@ -6,6 +6,14 @@
 # running as the `panel` user. Installed as a systemd unit that restarts
 # on failure and recycles itself every hour (--max-time), which also
 # bounds how long a stale copy of the code stays in memory.
+#
+# --timeout must cover the longest job the panel dispatches, or the worker
+# kills it halfway: restoring a backup that only exists off-site is a pull
+# plus a safety backup plus the restore itself
+# (2 * backup_timeout + remote_timeout + a margin, see config/panel.php).
+# panel-update.sh rewrites this unit with the same value on every update.
+
+QUEUE_JOB_TIMEOUT="${QUEUE_JOB_TIMEOUT:-7320}"
 
 render_queue_service() {
   local app_dir="$1"
@@ -19,7 +27,7 @@ After=network.target mysql.service
 User=panel
 Group=panel
 WorkingDirectory=${app_dir}
-ExecStart=/usr/bin/php ${app_dir}/artisan queue:work database --sleep=3 --tries=1 --timeout=1860 --max-time=3600
+ExecStart=/usr/bin/php ${app_dir}/artisan queue:work database --sleep=3 --tries=1 --timeout=${QUEUE_JOB_TIMEOUT} --max-time=3600
 Restart=always
 RestartSec=5
 StandardOutput=append:/var/log/panel-queue.log

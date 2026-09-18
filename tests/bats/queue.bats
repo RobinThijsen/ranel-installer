@@ -10,7 +10,7 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"User=panel"* ]]
   [[ "$output" == *"WorkingDirectory=/opt/panel/app"* ]]
-  [[ "$output" == *"ExecStart=/usr/bin/php /opt/panel/app/artisan queue:work database --sleep=3 --tries=1 --timeout=1860 --max-time=3600"* ]]
+  [[ "$output" == *"ExecStart=/usr/bin/php /opt/panel/app/artisan queue:work database --sleep=3 --tries=1 --timeout=7320 --max-time=3600"* ]]
   [[ "$output" == *"Restart=always"* ]]
   [[ "$output" == *"WantedBy=multi-user.target"* ]]
 }
