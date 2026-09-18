@@ -58,7 +58,10 @@ deploy_panel_app() {
   chmod 640 "${target_dir}/.env"
 
   log_info "Running composer install"
-  (cd "$target_dir" && composer install --no-dev --optimize-autoloader)
+  # Composer refuses to run as root without either flag — interactively it
+  # blocks on a "Continue as root/super user?" prompt (this step runs before
+  # the app is chown'd to `panel`, so it is genuinely root here).
+  (cd "$target_dir" && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --optimize-autoloader)
 
   log_info "Installing and building frontend assets"
   (cd "$target_dir" && npm ci && npm run build)

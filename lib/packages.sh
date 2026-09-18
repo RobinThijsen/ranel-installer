@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # lib/packages.sh
 
+# Ubuntu 22.04+/24.04 cloud images ship needrestart, which pops up its own
+# interactive "which services should be restarted?" dialog after any
+# apt-get install/upgrade — independent of DEBIAN_FRONTEND, and triggered
+# specifically when stdin is a real TTY (true for bootstrap.sh's documented
+# invocation). Force it to restart everything automatically instead of
+# hanging the installer waiting for a keypress.
+export NEEDRESTART_MODE=a
+
 ensure_git_installed() {
   if command -v git >/dev/null 2>&1; then
     return 0
