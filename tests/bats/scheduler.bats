@@ -8,9 +8,9 @@ setup() {
   run render_scheduler_cron "/opt/panel/app" "/var/log/panel-scheduler.log"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'MAILTO=""'* ]]
-  [[ "$output" == *"* * * * * panel cd /opt/panel/app && HOME=/var/lib/panel php artisan schedule:run >> /var/log/panel-scheduler.log 2>&1"* ]]
-  [[ "$output" == *"managed by ranel"* ]]
+  [[ "$output" == *'MAILTO=""'* ]] || return 1
+  [[ "$output" == *"* * * * * panel cd /opt/panel/app && HOME=/var/lib/panel php artisan schedule:run >> /var/log/panel-scheduler.log 2>&1"* ]] || return 1
+  [[ "$output" == *"managed by ranel"* ]] || return 1
 }
 
 @test "setup_scheduler writes the cron file, creates the log file and keeps an existing one" {

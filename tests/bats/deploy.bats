@@ -7,11 +7,11 @@ setup() {
   run render_panel_env "$FIXTURE_ENV_EXAMPLE" "panel_db" "panel_user" "s3cret" "https://panel.example.com" "base64:fakekey"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"DB_DATABASE=panel_db"* ]]
-  [[ "$output" == *"DB_USERNAME=panel_user"* ]]
-  [[ "$output" == *"DB_PASSWORD=s3cret"* ]]
-  [[ "$output" == *"APP_URL=https://panel.example.com"* ]]
-  [[ "$output" == *"APP_KEY=base64:fakekey"* ]]
+  [[ "$output" == *"DB_DATABASE=panel_db"* ]] || return 1
+  [[ "$output" == *"DB_USERNAME=panel_user"* ]] || return 1
+  [[ "$output" == *"DB_PASSWORD=s3cret"* ]] || return 1
+  [[ "$output" == *"APP_URL=https://panel.example.com"* ]] || return 1
+  [[ "$output" == *"APP_KEY=base64:fakekey"* ]] || return 1
 }
 
 @test "render_panel_env appends APP_KEY when missing from .env.example" {
@@ -29,5 +29,5 @@ EOF
   run render_panel_env "$env_example" "panel_db" "panel_user" "s3cret" "https://panel.example.com" "base64:fakekey"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"APP_KEY=base64:fakekey"* ]]
+  [[ "$output" == *"APP_KEY=base64:fakekey"* ]] || return 1
 }

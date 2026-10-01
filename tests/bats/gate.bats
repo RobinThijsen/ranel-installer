@@ -14,5 +14,5 @@ setup() {
   run validate_git_key "git@example.com:agency/panel-app.git" "/tmp/bad-key"
   [ "$status" -ne 0 ]
   run cat "$PANEL_LOG_FILE"
-  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"ERROR"* ]] || return 1
 }

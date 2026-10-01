@@ -6,13 +6,13 @@ setup() {
 @test "log_info writes an INFO line with the message" {
   log_info "starting step"
   run cat "$PANEL_LOG_FILE"
-  [[ "$output" == *"INFO"* ]]
-  [[ "$output" == *"starting step"* ]]
+  [[ "$output" == *"INFO"* ]] || return 1
+  [[ "$output" == *"starting step"* ]] || return 1
 }
 
 @test "log_error writes an ERROR line with the message" {
   log_error "something broke"
   run cat "$PANEL_LOG_FILE"
-  [[ "$output" == *"ERROR"* ]]
-  [[ "$output" == *"something broke"* ]]
+  [[ "$output" == *"ERROR"* ]] || return 1
+  [[ "$output" == *"something broke"* ]] || return 1
 }

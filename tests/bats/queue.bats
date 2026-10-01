@@ -8,11 +8,11 @@ setup() {
   run render_queue_service "/opt/panel/app"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"User=panel"* ]]
-  [[ "$output" == *"WorkingDirectory=/opt/panel/app"* ]]
-  [[ "$output" == *"ExecStart=/usr/bin/php /opt/panel/app/artisan queue:work database --sleep=3 --tries=1 --timeout=7320 --max-time=3600"* ]]
-  [[ "$output" == *"Restart=always"* ]]
-  [[ "$output" == *"WantedBy=multi-user.target"* ]]
+  [[ "$output" == *"User=panel"* ]] || return 1
+  [[ "$output" == *"WorkingDirectory=/opt/panel/app"* ]] || return 1
+  [[ "$output" == *"ExecStart=/usr/bin/php /opt/panel/app/artisan queue:work database --sleep=3 --tries=1 --timeout=7320 --max-time=3600"* ]] || return 1
+  [[ "$output" == *"Restart=always"* ]] || return 1
+  [[ "$output" == *"WantedBy=multi-user.target"* ]] || return 1
 }
 
 @test "setup_queue_worker writes the unit file, reloads systemd and enables the service" {
@@ -24,5 +24,5 @@ setup() {
 
   [ -f "$unit_file" ]
   run cat "$unit_file"
-  [[ "$output" == *"queue:work database"* ]]
+  [[ "$output" == *"queue:work database"* ]] || return 1
 }

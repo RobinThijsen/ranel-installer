@@ -21,7 +21,7 @@ _file_mode() {
   run add_sudoers_entry "/opt/panel/scripts/create-site.sh" "$sudoers_file"
   [ "$status" -eq 0 ]
   run cat "$sudoers_file"
-  [[ "$output" == *"/opt/panel/scripts/create-site.sh"* ]]
+  [[ "$output" == *"/opt/panel/scripts/create-site.sh"* ]] || return 1
 }
 
 @test "add_sudoers_entry leaves the original file unchanged when visudo rejects it" {
@@ -36,7 +36,7 @@ _file_mode() {
   [ "$status" -ne 0 ]
   run cat "$sudoers_file"
   [ "$output" = "$original_content" ]
-  [[ "$output" != *"create-site.sh"* ]]
+  [[ "$output" != *"create-site.sh"* ]] || return 1
   [ ! -f "${sudoers_file}.tmp" ]
 }
 
@@ -116,7 +116,7 @@ _file_mode() {
   [ -f "$scripts_dir/create-site.sh" ]
   [ "$(_file_mode "$scripts_dir/create-site.sh")" = "700" ]
   run cat "$sudoers_file"
-  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]]
+  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]] || return 1
 }
 
 @test "sync_privileged_scripts copies multiple scripts, each mode 700 with its own sudoers entry" {
@@ -137,8 +137,8 @@ _file_mode() {
   [ "$(_file_mode "$scripts_dir/create-site.sh")" = "700" ]
   [ "$(_file_mode "$scripts_dir/delete-site.sh")" = "700" ]
   run cat "$sudoers_file"
-  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]]
-  [[ "$output" == *"${scripts_dir}/delete-site.sh"* ]]
+  [[ "$output" == *"${scripts_dir}/create-site.sh"* ]] || return 1
+  [[ "$output" == *"${scripts_dir}/delete-site.sh"* ]] || return 1
 }
 
 @test "sync_privileged_scripts does nothing when the source directory is absent" {

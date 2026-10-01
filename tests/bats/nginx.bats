@@ -8,10 +8,10 @@ setup() {
   run render_panel_vhost "panel.example.com" "/opt/panel/app"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"server_name panel.example.com;"* ]]
-  [[ "$output" == *"root /opt/panel/app/public;"* ]]
-  [[ "$output" == *"root /opt/panel/app/public;"$'\n'"    include /etc/nginx/ranel/panel.d/*.conf;"* ]]
-  [[ "$output" == *"fastcgi_pass unix:/run/php/php8.4-fpm-panel.sock;"* ]]
+  [[ "$output" == *"server_name panel.example.com;"* ]] || return 1
+  [[ "$output" == *"root /opt/panel/app/public;"* ]] || return 1
+  [[ "$output" == *"root /opt/panel/app/public;"$'\n'"    include /etc/nginx/ranel/panel.d/*.conf;"* ]] || return 1
+  [[ "$output" == *"fastcgi_pass unix:/run/php/php8.4-fpm-panel.sock;"* ]] || return 1
 }
 
 @test "write_panel_vhost writes the vhost file and enables it via symlink" {
@@ -26,8 +26,8 @@ setup() {
 
   [ -f "$sites_available/panel.conf" ]
   run cat "$sites_available/panel.conf"
-  [[ "$output" == *"server_name panel.example.com;"* ]]
-  [[ "$output" == *"root /opt/panel/app/public;"* ]]
+  [[ "$output" == *"server_name panel.example.com;"* ]] || return 1
+  [[ "$output" == *"root /opt/panel/app/public;"* ]] || return 1
 
   [ -L "$sites_enabled/panel.conf" ]
   # the directory the include points at exists, even empty

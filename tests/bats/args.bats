@@ -21,7 +21,7 @@ setup() {
     --deploy-key=/tmp/fake-key \
     --admin-email=admin@example.com
   [ "$status" -ne 0 ]
-  [[ "$output" == *"--domain is required"* ]]
+  [[ "$output" == *"--domain is required"* ]] || return 1
 }
 
 @test "parse_install_args fails when --repo-url is missing" {
@@ -30,7 +30,7 @@ setup() {
     --deploy-key=/tmp/fake-key \
     --admin-email=admin@example.com
   [ "$status" -ne 0 ]
-  [[ "$output" == *"--repo-url is required"* ]]
+  [[ "$output" == *"--repo-url is required"* ]] || return 1
 }
 
 @test "parse_install_args fails when --deploy-key is missing" {
@@ -39,7 +39,7 @@ setup() {
     --repo-url=git@github.com:agency/panel-app.git \
     --admin-email=admin@example.com
   [ "$status" -ne 0 ]
-  [[ "$output" == *"--deploy-key is required"* ]]
+  [[ "$output" == *"--deploy-key is required"* ]] || return 1
 }
 
 @test "parse_install_args fails when --admin-email is missing" {
@@ -48,7 +48,7 @@ setup() {
     --repo-url=git@github.com:agency/panel-app.git \
     --deploy-key=/tmp/fake-key
   [ "$status" -ne 0 ]
-  [[ "$output" == *"--admin-email is required"* ]]
+  [[ "$output" == *"--admin-email is required"* ]] || return 1
 }
 
 @test "parse_install_args fails on an unknown argument" {
@@ -59,7 +59,7 @@ setup() {
     --admin-email=admin@example.com \
     --bogus=foo
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Unknown argument: --bogus=foo"* ]]
+  [[ "$output" == *"Unknown argument: --bogus=foo"* ]] || return 1
 }
 
 @test "parse_install_args defaults to SSL on and accepts --skip-ssl" {

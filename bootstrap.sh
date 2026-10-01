@@ -9,6 +9,15 @@
 # jamais rien. `bash -c "$(curl ...)"` laisse stdin connecté au terminal.
 set -euo pipefail
 
+# Before anything else, and above all before asking for a private key: this
+# installer needs root for apt, mysql, /opt and sudoers, and it is
+# deliberately not idempotent. A forgotten sudo would mean pasting a
+# deploy key, waiting, failing halfway, and starting from a new server.
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Erreur : lance l'installation en root (sudo -i, puis relance la commande). Rien n'a été téléchargé et aucune clé n'a été demandée." >&2
+  exit 1
+fi
+
 if [ ! -t 0 ]; then
   echo "Erreur : ce script doit être lancé avec 'bash -c \"\$(curl -fsSL <url>)\"', pas avec 'curl ... | bash' (qui empêche la saisie interactive de la clé de déploiement)." >&2
   exit 1

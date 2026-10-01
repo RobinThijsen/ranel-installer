@@ -36,6 +36,14 @@ PANEL_SUDOERS_FILE="/etc/sudoers.d/panel"
 PANEL_DB_NAME="panel"
 PANEL_DB_USER="panel"
 
+# Checked before the log file is even opened: /var/log/panel-install.log is
+# not writable by a normal user, and the redirection below would fail with a
+# cryptic bash error instead of saying what is wrong.
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Erreur : cet installateur doit être lancé en root (sudo -i, puis relance la commande)." >&2
+  exit 1
+fi
+
 trap 'log_error "Installation échouée. Ce script n'\''est pas idempotent : repars d'\''un serveur neuf. Log complet : ${PANEL_LOG_FILE}"; echo "Installation échouée. Ce script n'\''est pas idempotent : repars d'\''un serveur neuf. Log complet : ${PANEL_LOG_FILE}" >&2' ERR
 
 # Capture the full output of every subsequent command (apt, composer, artisan,

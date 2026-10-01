@@ -7,27 +7,27 @@ setup() {
 @test "render_panel_pool runs as panel on the socket nginx expects" {
   run render_panel_pool
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[panel]"* ]]
-  [[ "$output" == *"user = panel"* ]]
-  [[ "$output" == *"listen = /run/php/php8.4-fpm-panel.sock"* ]]
-  [[ "$output" == *"listen.owner = www-data"* ]]
+  [[ "$output" == *"[panel]"* ]] || return 1
+  [[ "$output" == *"user = panel"* ]] || return 1
+  [[ "$output" == *"listen = /run/php/php8.4-fpm-panel.sock"* ]] || return 1
+  [[ "$output" == *"listen.owner = www-data"* ]] || return 1
 }
 
 @test "render_panel_fpm_config is a standalone instance including its own pool.d" {
   run render_panel_fpm_config "/etc/php/8.4/fpm/panel"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[global]"* ]]
-  [[ "$output" == *"pid = /run/php/php8.4-fpm-panel.pid"* ]]
-  [[ "$output" == *"include = /etc/php/8.4/fpm/panel/pool.d/*.conf"* ]]
+  [[ "$output" == *"[global]"* ]] || return 1
+  [[ "$output" == *"pid = /run/php/php8.4-fpm-panel.pid"* ]] || return 1
+  [[ "$output" == *"include = /etc/php/8.4/fpm/panel/pool.d/*.conf"* ]] || return 1
 }
 
 @test "render_panel_fpm_service runs php-fpm on the dedicated config without ProtectSystem" {
   run render_panel_fpm_service "/etc/php/8.4/fpm/panel/php-fpm.conf"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ExecStart=/usr/sbin/php-fpm8.4 --nodaemonize --fpm-config /etc/php/8.4/fpm/panel/php-fpm.conf"* ]]
-  [[ "$output" == *"Type=notify"* ]]
-  [[ "$output" == *"Restart=always"* ]]
-  [[ "$output" != *"ProtectSystem="* ]]
+  [[ "$output" == *"ExecStart=/usr/sbin/php-fpm8.4 --nodaemonize --fpm-config /etc/php/8.4/fpm/panel/php-fpm.conf"* ]] || return 1
+  [[ "$output" == *"Type=notify"* ]] || return 1
+  [[ "$output" == *"Restart=always"* ]] || return 1
+  [[ "$output" != *"ProtectSystem="* ]] || return 1
 }
 
 @test "setup_panel_php_pool writes config, pool and unit into the given locations" {

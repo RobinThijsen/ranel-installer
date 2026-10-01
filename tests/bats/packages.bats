@@ -20,10 +20,11 @@ setup() {
   export FAKE_INSTALLED_PKGS="unzip"
   run apply_package_manifest "$BATS_TEST_TMPDIR/packages.txt"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"already installed"* ]]
+  # log_info writes to the install log, not to stdout
+  grep -q "already installed" "$PANEL_LOG_FILE"
 
   run apply_package_manifest "$BATS_TEST_TMPDIR/missing.txt"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"skipping"* ]]
+  grep -q "No package manifest .*skipping" "$PANEL_LOG_FILE"
   ! grep -q "apt-get" "$FAKE_CALLS_LOG"
 }
