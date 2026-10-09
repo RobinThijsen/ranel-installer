@@ -25,6 +25,12 @@ server {
 
     location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
+        # \$realpath_root, not \$document_root: app is a symlink to the
+        # current release, and opcache keys its cache by real path. Without
+        # this, an update — or a rollback — would keep serving the opcode of
+        # the release it just left.
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT \$realpath_root;
         fastcgi_pass unix:/run/php/php8.4-fpm-panel.sock;
     }
 

@@ -7,6 +7,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/log.sh"
 # shellcheck source=lib/args.sh
 source "${SCRIPT_DIR}/lib/args.sh"
+# shellcheck source=lib/dist.sh
+source "${SCRIPT_DIR}/lib/dist.sh"
+# shellcheck source=lib/release.sh
+source "${SCRIPT_DIR}/lib/release.sh"
 # shellcheck source=lib/gate.sh
 source "${SCRIPT_DIR}/lib/gate.sh"
 # shellcheck source=lib/packages.sh
@@ -53,13 +57,19 @@ exec > >(tee -a "$PANEL_LOG_FILE") 2>&1
 main() {
   parse_install_args "$@"
 
-  ensure_git_installed
-
-  log_info "Validating deploy key before touching the system"
-  if ! validate_git_key "$PANEL_REPO_URL" "$PANEL_DEPLOY_KEY_PATH"; then
-    echo "Deploy key rejected. Aborting — nothing was installed." >&2
+  # The gate: resolve the version and download a verified archive before
+  # the first system change. An installer that is not idempotent owes
+  # that much — failing halfway costs a whole server.
+  local gate_dir resolved version archive
+  gate_dir="$(mktemp -d)"
+  log_info "Resolving the requested version before touching the system"
+  if ! resolved="$(validate_distribution "$PANEL_VERSION" "$gate_dir")"; then
+    echo "Aucune archive utilisable. Abandon — rien n'a été installé." >&2
+    rm -rf "$gate_dir"
     exit 1
   fi
+  version="$(printf '%s' "$resolved" | cut -f1)"
+  archive="$(printf '%s' "$resolved" | cut -f2)"
 
   install_base_packages
   install_composer
@@ -85,8 +95,9 @@ SQL
     scheme="http"
   fi
 
-  deploy_panel_app "$PANEL_REPO_URL" "$PANEL_DEPLOY_KEY_PATH" "$PANEL_APP_DIR" \
+  install_panel_app "$version" "$archive" \
     "$PANEL_DOMAIN" "$PANEL_DB_NAME" "$PANEL_DB_USER" "$db_password" "$admin_password" "$scheme"
+  rm -rf "$gate_dir"
 
   apply_package_manifest "${PANEL_APP_DIR}/system/packages.txt"
   sync_privileged_scripts "${PANEL_APP_DIR}/privileged-scripts" "$PANEL_SCRIPTS_DIR" "$PANEL_SUDOERS_FILE"
@@ -111,6 +122,7 @@ SQL
 
   echo ""
   echo "Panel installed successfully."
+  echo "Version: ${version}"
   echo "URL: ${scheme}://${PANEL_DOMAIN}"
   echo "Admin account: ${PANEL_ADMIN_EMAIL}"
   echo "Admin password: ${admin_password}"

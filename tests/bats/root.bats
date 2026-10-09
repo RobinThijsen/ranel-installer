@@ -1,16 +1,16 @@
 # The two entry points refuse to run as a normal user. Worth its own file:
 # the installer is deliberately not idempotent, so a forgotten sudo costs a
-# whole server — and bootstrap.sh asks for a private key before handing over
-# to install.sh, so it must refuse *before* that.
+# whole server, and both entry points must say so before doing anything.
 
-@test "bootstrap.sh refuses a normal user before downloading or asking for the key" {
+@test "bootstrap.sh refuses a normal user before downloading anything" {
   [ "$(id -u)" -ne 0 ] || skip "lancé en root"
 
   run "$BATS_TEST_DIRNAME/../../bootstrap.sh" --domain=panel.example.com
   [ "$status" -eq 1 ]
   [[ "$output" == *"en root"* ]] || return 1
-  [[ "$output" == *"aucune clé n'a été demandée"* ]] || return 1
-  # and it said so instead of talking about the terminal
+  [[ "$output" == *"Rien n'a été téléchargé"* ]] || return 1
+  # no terminal requirement any more: there is no key to paste, so
+  # `curl | bash` is a supported form and must not be rejected
   [[ "$output" != *"curl ... | bash"* ]] || return 1
 }
 
