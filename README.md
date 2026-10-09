@@ -16,7 +16,7 @@ fournissez.
 
 L'installateur **n'est pas idempotent**, et c'est assumé : il refuse de
 deviner dans quel état un serveur à moitié installé se trouve. En cas
-d'échec, on repart d'un serveur neuf. Les trois points ci-dessous sont
+d'échec, on repart d'un serveur neuf. Les deux points ci-dessous sont
 donc à régler **avant** de lancer la commande.
 
 ### 1. Un serveur neuf
@@ -48,76 +48,54 @@ contre votre serveur.
 Pour un essai sans domaine, `--skip-ssl` sert le panel en HTTP simple. À
 réserver au local : le panel transporte des mots de passe.
 
-### 3. Une clé de déploiement pour le dépôt de l'app
-
-L'installateur clone l'app du panel par SSH. Il faut donc une paire de
-clés dédiée, dont vous donnerez **la partie publique à la forge** et **la
-partie privée à l'installateur**.
-
-Sur votre machine :
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/ranel-deploy -C "ranel deploy key" -N ""
-```
-
-Puis, sur GitHub : dépôt de l'app → *Settings* → *Deploy keys* → *Add deploy
-key* → collez le contenu de `~/.ssh/ranel-deploy.pub`. **Laissez « Allow
-write access » décoché** : l'installateur ne fait que lire.
-
-La clé est validée contre le dépôt **avant** que quoi que ce soit ne soit
-installé. Une clé refusée interrompt tout sans avoir touché au système.
-
----
-
 ## L'installation
 
 En SSH **sur le serveur, en root** :
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/RobinThijsen/ranel-installer/main/bootstrap.sh)" -- --domain=panel.mondomaine.com --repo-url=git@github.com:VotreCompte/ranel.git --admin-email=vous@mondomaine.com
+curl -fsSL https://raw.githubusercontent.com/RobinThijsen/ranel-installer/main/bootstrap.sh | bash -s -- --domain=panel.mondomaine.com --admin-email=vous@mondomaine.com
 ```
 
-**N'utilisez pas `curl … | bash`.** Le pipe occupe l'entrée standard pour
-transmettre le script, et la saisie de la clé privée ne recevrait jamais
-rien. La forme `bash -c "$(curl …)"` laisse le terminal connecté. Le
-script refuse d'ailleurs de tourner sans terminal.
+Si vous préférez lire le script avant qu'il ne tourne :
 
-Le script demande alors la clé privée :
-
-```
-Colle le contenu de ta clé de déploiement git (clé privée), puis termine
-par une ligne contenant uniquement EOF :
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/RobinThijsen/ranel-installer/main/bootstrap.sh)" -- --domain=panel.mondomaine.com --admin-email=vous@mondomaine.com
 ```
 
-Collez tout `~/.ssh/ranel-deploy`, de `-----BEGIN` à `-----END` inclus,
-puis une ligne contenant exactement `EOF`. La clé va dans un fichier
-temporaire en `600`, supprimé à la fin — elle ne passe jamais en argument
-de commande, où `ps` la rendrait lisible par tous.
+Les deux formes marchent. Rien à coller, aucune clé à préparer : la
+version la plus récente est résolue depuis le manifeste public et son
+archive est vérifiée avant d'être dépliée.
 
 ### Les options
 
 | Option | |
 |---|---|
 | `--domain=` | **requis** — le domaine du panel |
-| `--repo-url=` | **requis** — le dépôt SSH de l'app |
 | `--admin-email=` | **requis** — le compte administrateur créé, et l'adresse donnée à Let's Encrypt |
+| `--version=` | une version précise (`1.0.0`) au lieu de la dernière publiée |
 | `--skip-ssl` | sert le panel en HTTP, sans certificat (local uniquement) |
 
-Comptez une dizaine de minutes. Tout est journalisé dans
+Comptez quelques minutes — nettement moins qu'avant, puisque ni Composer
+ni npm ne tournent sur le serveur : l'archive contient déjà les
+dépendances et les assets compilés. Tout est journalisé dans
 `/var/log/panel-install.log`.
+
+**Ce qui est vérifié avant la première modification du système** : que le
+manifeste est lisible, que la version demandée existe, et que l'archive
+téléchargée correspond à la somme de contrôle que le manifeste annonce.
+Si l'un des trois échoue, rien n'a été installé.
 
 ### À la fin
 
 ```
 Panel installed successfully.
+Version: 1.0.0
 URL: https://panel.mondomaine.com
 Admin account: vous@mondomaine.com
 Admin password: <mot de passe généré>
 ```
 
 **Notez ce mot de passe maintenant**, il n'est affiché qu'une fois.
-
----
 
 ## Les cinq minutes qui suivent
 
@@ -127,9 +105,8 @@ Connectez-vous, puis, dans l'ordre :
    affiché dans un terminal.
 2. **Clé de déploiement du panel** (Paramètres › Clé de déploiement) :
    générez-la, puis ajoutez sa partie publique comme *deploy key* sur
-   chaque dépôt de site à déployer. Elle est différente de celle utilisée
-   pour l'installation — celle-ci sert au panel pour aller chercher le code
-   des sites.
+   chaque dépôt de site à déployer. Elle ne sert qu'aux **sites** : le
+   panel, lui, n'a plus besoin d'accéder à aucun dépôt.
 3. **Notifications** (Paramètres › Notifications) : un serveur SMTP, puis
    activez l'envoi. Sans ça, aucune alerte ne part — ni sauvegarde en
    échec, ni certificat qui expire, ni disque qui se remplit.
@@ -142,24 +119,40 @@ Connectez-vous, puis, dans l'ordre :
 
 ## Mettre le panel à jour
 
-L'installateur ne sert qu'une fois. Ensuite, sur le serveur :
+Depuis l'interface (Paramètres › Mise à jour), ou sur le serveur :
 
 ```bash
 sudo bash -c 'cd / && /opt/panel/scripts/panel-update.sh'
 ```
 
-Il tire la dernière version de l'app, installe les paquets manquants,
-joue les migrations, resynchronise les scripts privilégiés et leur
-`sudoers`, puis redémarre ce qu'il faut. `--branch=<nom>` déploie une
-autre branche que `main`.
+Il lit le manifeste, télécharge la dernière version publiée, vérifie sa
+somme de contrôle, la déplie à côté des autres, joue les migrations,
+puis **bascule un lien symbolique**. Les paquets manquants, les scripts
+privilégiés, le `sudoers`, le cron et les services suivent.
 
----
+`--check` dit seulement où on en est, sans rien changer.
+`--version=1.2.3` installe une version précise.
+
+### Revenir en arrière
+
+```bash
+sudo bash -c 'cd / && /opt/panel/scripts/panel-update.sh --version=1.0.0'
+```
+
+Une version plus ancienne est reconnue comme un retour arrière : le lien
+revient, et **ni les migrations ni les paquets ne sont touchés**. Une
+migration a rarement de quoi se défaire, donc revenir dans le code ne
+fait jamais revenir dans les données — le script le dit plutôt que de
+laisser croire le contraire. Les versions encore dépliées sont aussi
+proposées dans l'interface.
 
 ## Ce que l'installateur met où
 
 | Chemin | |
 |---|---|
-| `/opt/panel/app` | l'app du panel (propriétaire `panel`) |
+| `/opt/panel/app` | lien symbolique vers la version servie |
+| `/opt/panel/releases/<version>/` | une version dépliée (propriétaire `panel`) |
+| `/opt/panel/shared/` | le `.env` et le `storage`, qui survivent aux versions |
 | `/opt/panel/scripts` | les scripts privilégiés (`root:root 700`) |
 | `/etc/sudoers.d/panel` | une ligne par script, rien d'autre |
 | `/var/www/<domaine>` | les sites hébergés |
@@ -178,7 +171,9 @@ entier. Les causes les plus fréquentes :
 
 | Message | Cause |
 |---|---|
-| `Deploy key rejected` | la clé publique n'est pas (encore) *deploy key* sur le dépôt, ou l'URL n'est pas la forme SSH `git@…` |
+| `manifeste des versions est injoignable` | pas de sortie réseau vers `raw.githubusercontent.com` |
+| `ne correspond pas à sa somme de contrôle` | archive corrompue en route — relancez ; si ça persiste, signalez-le |
+| `la version X n'existe pas` | voir les versions publiées dans [le manifeste](https://github.com/RobinThijsen/ranel-dist/blob/main/versions.tsv) |
 | `doit être lancé en root` | il manque `sudo -i` |
 | une erreur de certbot | le DNS ne pointe pas encore sur ce serveur, ou Cloudflare est en mode proxied |
 
