@@ -32,46 +32,64 @@ APP_KEY=${app_key}"
   echo "$rendered"
 }
 
-deploy_panel_app() {
-  local repo_url="$1"
-  local key_path="$2"
-  local target_dir="$3"
-  local domain="$4"
-  local db_name="$5"
-  local db_user="$6"
-  local db_password="$7"
-  local admin_password="$8"
-  local scheme="${9:-https}"
+PANEL_HOME="${PANEL_HOME:-/var/lib/panel}"
 
-  log_info "Cloning panel app from ${repo_url} into ${target_dir}"
-  GIT_SSH_COMMAND="ssh -i ${key_path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
-    git clone --depth 1 "$repo_url" "$target_dir"
+# The panel user's passwd home is /opt/panel, which is root-owned on
+# purpose — so artisan gets a home of its own for its caches. Same
+# directory panel-update.sh uses, for the same reason.
+ensure_panel_home() {
+  mkdir -p "${PANEL_HOME}/.ssh"
+  chown "${PANEL_OWNER}:${PANEL_GROUP}" "$PANEL_HOME" "${PANEL_HOME}/.ssh"
+  chmod 700 "$PANEL_HOME" "${PANEL_HOME}/.ssh"
+}
 
-  shred -u "$key_path" 2>/dev/null || rm -f "$key_path"
-  log_info "Deploy key at ${key_path} deleted after use"
+# artisan runs as the panel user, never as root: the release and shared/
+# already belong to panel, and a root-owned log file inside a
+# panel-owned directory is a bug that only shows up weeks later.
+as_panel_app() {
+  runuser -u "$PANEL_OWNER" -- env HOME="$PANEL_HOME" \
+    bash -c 'cd "$1" && shift && exec "$@"' bash "${PANEL_ROOT}/app" "$@"
+}
 
-  local app_key
-  app_key="base64:$(openssl rand -base64 32)"
+# Installs <version> from <archive> and makes it the served release.
+# No composer, no npm: the archive already carries vendor/ and the
+# compiled assets, so nothing is built on the customer's machine — and no
+# Composer credential is ever needed there.
+install_panel_app() {
+  local version="$1"
+  local archive="$2"
+  local domain="$3"
+  local db_name="$4"
+  local db_user="$5"
+  local db_password="$6"
+  local admin_password="$7"
+  local scheme="${8:-https}"
+  local shared release app_key
 
-  render_panel_env "${target_dir}/.env.example" "$db_name" "$db_user" "$db_password" \
-    "${scheme}://${domain}" "$app_key" > "${target_dir}/.env"
-  chmod 640 "${target_dir}/.env"
+  log_info "Installing panel ${version} from ${archive}"
+  panel_install_release "$version" "$archive" || return 1
 
-  log_info "Running composer install"
-  # Composer refuses to run as root without either flag — interactively it
-  # blocks on a "Continue as root/super user?" prompt (this step runs before
-  # the app is chown'd to `panel`, so it is genuinely root here).
-  (cd "$target_dir" && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --optimize-autoloader)
+  shared="$(panel_shared_dir)"
+  release="$(panel_releases_dir)/${version}"
 
-  log_info "Installing and building frontend assets"
-  (cd "$target_dir" && npm ci && npm run build)
+  if [ ! -f "${shared}/.env" ]; then
+    app_key="base64:$(openssl rand -base64 32)"
+    render_panel_env "${release}/.env.example" "$db_name" "$db_user" "$db_password" \
+      "${scheme}://${domain}" "$app_key" > "${shared}/.env"
+    chmod 640 "${shared}/.env"
+    chown "${PANEL_OWNER}:${PANEL_GROUP}" "${shared}/.env"
+    log_info "Panel .env rendered in ${shared}"
+  fi
+
+  ensure_panel_home
+  panel_activate_release "$version" || return 1
+  log_info "Panel ${version} is the served release"
 
   log_info "Running database migrations"
-  (cd "$target_dir" && php artisan migrate --force)
+  as_panel_app php artisan migrate --force
 
   log_info "Creating initial admin account"
-  (cd "$target_dir" && php artisan panel:create-admin "$PANEL_ADMIN_EMAIL" --password="$admin_password")
+  as_panel_app php artisan panel:create-admin "$PANEL_ADMIN_EMAIL" --password="$admin_password"
 
-  chown -R panel:panel "$target_dir"
-  log_info "Panel app deployed to ${target_dir}"
+  log_info "Panel ${version} installed in ${PANEL_ROOT}"
 }

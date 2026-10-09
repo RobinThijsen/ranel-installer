@@ -9,17 +9,6 @@
 # hanging the installer waiting for a keypress.
 export NEEDRESTART_MODE=a
 
-ensure_git_installed() {
-  if command -v git >/dev/null 2>&1; then
-    return 0
-  fi
-
-  log_info "git not found — installing it before the deploy-key gate can run"
-  apt-get update -y
-  DEBIAN_FRONTEND=noninteractive apt-get install -y git
-  log_info "git installed"
-}
-
 add_php_repository() {
   local distro_id=""
   # shellcheck disable=SC1091
@@ -74,7 +63,10 @@ install_base_packages() {
   # PHP extensions: what the panel needs plus the usual baseline of hosted
   # Laravel / Prestashop sites (bcmath, gd, intl, zip, soap, sqlite3, opcache)
   # — a deployment's composer install fails on the first missing one.
-  log_info "Installing nginx, MySQL, PHP 8.4 + extensions, Node.js 22, Certbot"
+  # git is here and no longer installed on its own before a gate: it is a
+  # runtime dependency — site-deploy.sh clones the sites' repositories —
+  # and no longer needed to install the panel itself.
+  log_info "Installing nginx, MySQL, git, PHP 8.4 + extensions, Node.js 22, Certbot"
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     nginx \
     mysql-server \
@@ -83,6 +75,7 @@ install_base_packages() {
     php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip \
     php8.4-bcmath php8.4-gd php8.4-intl php8.4-soap \
     unzip curl \
+    git \
     certbot python3-certbot-nginx \
     nodejs
 
